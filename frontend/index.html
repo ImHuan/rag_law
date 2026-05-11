@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG cho Văn bản Pháp luật Việt Nam - AI Intern</title>
+    <style>
+        :root {
+            --bg-sidebar: #0f172a;
+            --bg-main: #1e293b;
+            --bg-input: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --user-msg: #3b82f6;
+            --ai-msg: #334155;
+            --border: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+        }
+
+        .new-chat-btn {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+            font-weight: 500;
+        }
+
+        .new-chat-btn:hover {
+            background-color: var(--bg-input);
+        }
+
+        .session-info {
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .current-session-id {
+            background: var(--bg-input);
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-top: 0.5rem;
+            word-break: break-all;
+            font-family: monospace;
+            color: var(--text-main);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .top-bar {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--border);
+        }
+
+        .btn-danger {
+            color: #ef4444;
+            border-color: #ef4444;
+            background: transparent;
+        }
+
+        .btn-danger:hover {
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+        }
+
+        .message-content {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .message.user .message-content {
+            background-color: var(--user-msg);
+            border-bottom-right-radius: 0;
+        }
+
+        .message.ai .message-content {
+            background-color: var(--ai-msg);
+            border-bottom-left-radius: 0;
+        }
+
+        .sources {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(0,0,0,0.2);
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 1.5rem 2rem;
+            background: var(--bg-main);
+            border-top: 1px solid var(--border);
+        }
+
+        .input-box {
+            display: flex;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 0.5rem;
+        }
+
+        .input-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .input-box button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .input-box button:hover {
+            background-color: var(--accent-hover);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <button class="new-chat-btn" onclick="startNewSession()">
+            + Cuộc trò chuyện mới
+        </button>
+        
+        <div class="session-info">
+            PHIÊN LÀM VIỆC HIỆN TẠI
+            <div class="current-session-id" id="sessionIdDisplay">Đang tạo...</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div>
+                <h3>RAG cho Văn bản Pháp luật Việt Nam</h3>
+            </div>
+            <div class="actions">
+                <input type="file" id="pdfUpload" accept=".pdf" class="hidden" onchange="uploadPDF()">
+                <button class="btn" onclick="document.getElementById('pdfUpload').click()">Tải lên PDF</button>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container" id="chatContainer">
+            <div class="message ai">
+                <div class="message-content">
+                    Xin chào! Tôi là trợ lý AI. Bạn hãy upload tài liệu PDF lên để tôi đọc, sau đó bạn có thể đặt bất kỳ câu hỏi nào về nội dung của nó.
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <div class="input-box">
+                <input type="text" id="chatInput" placeholder="Nhập tin nhắn..." onkeypress="handleEnter(event)">
+                <button onclick="sendMessage()" id="sendBtn">Gửi</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://127.0.0.1:8000/api/v1";
+        let currentSessionId = "";
+
+        function generateSessionId() {
+            return 'session_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function startNewSession() {
+            currentSessionId = generateSessionId();
+            document.getElementById("sessionIdDisplay").innerText = currentSessionId;
+            document.getElementById("chatContainer").innerHTML = `
+                <div class="message ai">
+                    <div class="message-content">
+                        Đã tạo phiên làm việc mới. Dữ liệu hoàn toàn độc lập với các phiên khác.
+                    </div>
+                </div>
+            `;
+        }
+
+        function appendMessage(role, content, sources = null) {
+            const chatContainer = document.getElementById("chatContainer");
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message ${role}`;
+            
+            let html = `<div class="message-content">${content.replace(/\n/g, '<br>')}</div>`;
+            
+
+
+            msgDiv.innerHTML = html;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function uploadPDF() {
+            const fileInput = document.getElementById('pdfUpload');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            appendMessage("user", `Đang upload file: ${file.name}...`);
+            
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("session_id", currentSessionId);
+
+            try {
+                const response = await fetch(`${API_BASE}/ingest`, {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    appendMessage("ai", `Tải lên thành công! Đã xử lý ${data.chunks} đoạn văn bản. Bạn có thể hỏi tôi về file này.`);
+                } else {
+                    appendMessage("ai", `Lỗi: ${data.detail}`);
+                }
+            } catch (error) {
+                appendMessage("ai", `Lỗi kết nối server: ${error.message}`);
+            }
+            
+            fileInput.value = ""; // Reset input
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById("chatInput");
+            const query = input.value.trim();
+            if (!query) return;
+
+            appendMessage("user", query);
+            input.value = "";
+            const sendBtn = document.getElementById("sendBtn");
+            sendBtn.innerText = "...";
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/chat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        query: query,
+                        session_id: currentSessionId
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    appendMessage("ai", data.response, data.sources);
+                } else {
+                    appendMessage("ai", `Lỗi: ${data.detail}`);
+                }
+            } catch (error) {
+                appendMessage("ai", `Lỗi kết nối server: ${error.message}`);
+            }
+
+            sendBtn.innerText = "Gửi";
+            sendBtn.disabled = false;
+            document.getElementById("chatInput").focus();
+        }
+
+        function handleEnter(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+
+        // Initialize first session
+        window.onload = startNewSession;
+    </script>
+</body>
+</html>
